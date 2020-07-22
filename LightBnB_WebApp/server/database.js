@@ -120,6 +120,54 @@ exports.getAllReservations = getAllReservations;
 
 /// Properties
 
+const handleOptions = (options) => {
+  const queryParams = [];
+  let queryStringOptions = "";
+  let nextQueryParam;
+  if (options.city) {
+    queryParams.length > 0
+      ? (nextQueryParam = "AND")
+      : (nextQueryParam = "WHERE");
+    queryParams.push(`%${options.city}%`);
+    queryStringOptions += `${nextQueryParam} city LIKE $${queryParams.length} `;
+  }
+
+  if (options.owner_id) {
+    queryParams.length > 0
+      ? (nextQueryParam = "AND")
+      : (nextQueryParam = "WHERE");
+    queryParams.push(options.owner_id);
+    queryStringOptions += `${nextQueryParam} owner_id = $${queryParams.length} `;
+  }
+
+  if (options.minimum_price_per_night) {
+    queryParams.length > 0
+      ? (nextQueryParam = "AND")
+      : (nextQueryParam = "WHERE");
+    queryParams.push(options.minimum_price_per_night);
+    queryStringOptions += `${nextQueryParam} cost_per_night >= $${queryParams.length} `;
+  }
+
+  if (options.maximum_price_per_night) {
+    queryParams.length > 0
+      ? (nextQueryParam = "AND")
+      : (nextQueryParam = "WHERE");
+    queryParams.push(options.maximum_price_per_nigh);
+    queryStringOptions += `${nextQueryParam} cost_per_night <= $${queryParams.length} `;
+  }
+
+  if (options.minimum_rating) {
+    queryParams.length > 0
+      ? (nextQueryParam = "AND")
+      : (nextQueryParam = "WHERE");
+    queryParams.push(options.minimum_rating);
+    queryStringOptions += `${nextQueryParam} rating >= $${queryParams.length} `;
+  }
+  console.log("queryStringOptions", queryStringOptions);
+
+  return { queryStringOptions, queryParams };
+};
+
 /**
  * Get all properties.
  * @param {{}} options An object containing query options.
@@ -127,35 +175,16 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function (options, limit = 10) {
-  const limitedProperties = {};
-
-  const queryParams = [];
-
   let queryString = `
   SELECT properties.*, avg(property_reviews.rating) as average_rating
   FROM properties
   JOIN property_reviews ON properties.id = property_id
   `;
 
-  if (options.city) {
-    queryParams.push(`%${options.city}%`);
-    queryString += `WHERE city LIKE $${queryParams.length}`;
-  }
+  const { queryStringOptions, queryParams } = handleOptions(options);
 
-  if (options.owner_id) {
-    queryParams.push(options.owner_id);
-    queryString += `WHERE owner_id = $${queryParams.length}`;
-  }
+  queryString += queryStringOptions;
 
-  if (options.minimum_price_per_night) {
-    queryParams.push(Number(options.minimum_price_per_night));
-    queryString += `WHERE cost_per_night >= $${queryParams.length}`;
-  }
-
-  if (options.maximum_price_per_night) {
-    queryParams.push(Number(options.maximum_price_per_night));
-    queryString += `WHERE cost_per_night <= $${queryParams.length}`;
-  }
   queryParams.push(limit);
   queryString += `
   GROUP BY properties.id
